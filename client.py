@@ -1,65 +1,52 @@
 import os
-import paramiko
+import subprocess
 
-def generate_ssh_key():
-    home_dir = os.path.expanduser("~")
-    ssh_key_dir = os.path.join(home_dir, ".ssh")
-
-    if not os.path.exists(ssh_key_dir):
-        os.makedirs(ssh_key_dir)
-
-    key_file = os.path.join(ssh_key_dir, "id_rsa")
-
-    if not os.path.exists(key_file):
-        # Generate the SSH key pair
-        key = paramiko.RSAKey.generate(2048)
-        with open(key_file, "w") as f:
-            key.write_private_key(f)
-        os.chmod(key_file, 0o600)
-
-        public_key_file = key_file + ".pub"
-        with open(public_key_file, "w") as f:
-            f.write(f"{key.get_name()} {key.get_base64()}")
-
-def ssh_connect(dynamic_dns_domain, port, username, private_key_path):
+def install_ssh_client():
     try:
-        # Use the dynamic DNS domain instead of the IP address
-        hostname = dynamic_dns_domain
-
-        # Create an SSH client instance
-        ssh_client = paramiko.SSHClient()
-
-        # Automatically add the server's host key (this is insecure, and you should use the host key verification in a production environment)
-        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-        # Connect to the server using the private key
-        ssh_client.connect(hostname, port=port, username=username, key_filename=private_key_path)
-
-        # Example: Run a command on the remote server
-        stdin, stdout, stderr = ssh_client.exec_command("uname -a")
-        print("Command Output:")
-        print(stdout.read().decode())
-
-        # Close the SSH connection
-        ssh_client.close()
-
-    except paramiko.AuthenticationException:
-        print("Authentication failed. Please check your credentials.")
-    except paramiko.SSHException as ssh_ex:
-        print(f"SSH connection error: {ssh_ex}")
+        # Install the SSH client if not already installed
+        install_command = "sudo apt-get update && sudo apt-get install -y openssh-client"
+        subprocess.run(install_command, shell=True, check=True)
     except Exception as ex:
-        print(f"Error: {ex}")
+        print(f"Error installing SSH client: {ex}")
+
+def setup_ssh_client():
+    try:
+        # Check if the SSH client is already installed
+        ssh_client_installed = False
+        try:
+            subprocess.run(["which", "ssh"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            ssh_client_installed = True
+        except subprocess.CalledProcessError:
+            pass
+
+        if not ssh_client_installed:
+            print("SSH client not installed. Installing SSH client...")
+            install_ssh_client()
+
+        # Attempt to SSH into the server
+        server_hostname = "inserthostname.noip.xx"  # Replace this with your server hostname
+        ssh_command = f"ssh {server_hostname}"
+
+        print("Attempting to SSH into the server...")
+        os.system(ssh_command)
+
+        # Check if SSH keys are set up for passwordless login
+        public_key_path = os.path.expanduser("~/.ssh/id_rsa.pub")
+        if not os.path.exists(public_key_path):
+            print("Generating SSH key pair...")
+            ssh_keygen_command = "ssh-keygen -f ~/.ssh/id_rsa -q -N ''"
+            subprocess.run(ssh_keygen_command, shell=True, check=True)
+
+        # Copy public key to the server for passwordless login
+        print("Copying public key to the server...")
+        copy_key_command = f"ssh-copy-id {server_hostname}"
+        subprocess.run(copy_key_command, shell=True, check=True)
+
+        print("Passwordless SSH setup is complete. You can now SSH into the server without a password.")
+        print(f"To SSH into the server, use: ssh user@{server_hostname}")
+
+    except Exception as ex:
+        print(f"Error setting up SSH client: {ex}")
 
 if __name__ == "__main__":
-    # Replace these with your Dynamic DNS domain and Linux machine's credentials
-    dynamic_dns_domain = "your_dynamic_dns_domain"
-    ssh_port = 22  # Default SSH port is 22
-    user = "your_username"
-
-    # Generate the SSH key pair if not already present
-    generate_ssh_key()
-
-    # Use the private key path for authentication
-    private_key_path = os.path.expanduser("~/.ssh/id_rsa")
-
-    ssh_connect(dynamic_dns_domain, ssh_port, user, private_key_path)
+    setup_ssh_client()
