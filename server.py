@@ -19,8 +19,8 @@ def setup_ssh_server(dynamic_dns_domain):
 
         # Log the SSH server status to a file
         log_file = "/var/log/ssh_server_status.log"
-        with open(log_file, "a") as f:
-            f.write(status_output)
+        os.system(f"sudo sh -c 'echo \"{status_output}\" >> {log_file}'")
+
 
         # Update the DNS record with the dynamic DNS service (e.g., DuckDNS)
         update_dns_command = f"curl 'https://www.duckdns.org/update?domains={dynamic_dns_domain}&token=YOUR_DUCKDNS_TOKEN&ip='"
