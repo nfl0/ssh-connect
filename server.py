@@ -1,7 +1,6 @@
 import os
-import paramiko
 
-def setup_ssh_server(dynamic_dns_domain):
+def setup_ssh_server():
     try:
         # Install the SSH server if not already installed
         install_command = "apt-get update && apt-get install -y openssh-server"
@@ -21,16 +20,8 @@ def setup_ssh_server(dynamic_dns_domain):
         log_file = "/var/log/ssh_server_status.log"
         os.system(f"sudo sh -c 'echo \"{status_output}\" >> {log_file}'")
 
-
-        # Update the DNS record with the dynamic DNS service (e.g., DuckDNS)
-        update_dns_command = f"curl 'https://www.duckdns.org/update?domains={dynamic_dns_domain}&token=YOUR_DUCKDNS_TOKEN&ip='"
-        os.system(update_dns_command)
-
     except Exception as ex:
         print(f"Error: {ex}")
 
 if __name__ == "__main__":
-    # Replace this with your Dynamic DNS domain
-    dynamic_dns_domain = "your_dynamic_dns_domain"
-
-    setup_ssh_server(dynamic_dns_domain)
+    setup_ssh_server()
